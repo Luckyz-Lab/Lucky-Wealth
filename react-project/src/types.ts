@@ -1,10 +1,13 @@
-export const STORAGE_VERSION = 2
+export const STORAGE_VERSION = 3
+
+export type IncomeType = '40_1' | '40_2' | '40_3' | '40_4' | '40_5' | '40_6' | '40_7' | '40_8'
 
 export interface Income {
   id: string
   t: string
   a: number
-  tp: '40_1' | '40_2' | '40_8'
+  tp: IncomeType
+  wht: number
 }
 
 export interface Expense {
@@ -34,15 +37,26 @@ export interface Deductions {
   personal: number
   spouse: number
   children: number
+  parents: number
+  disabled: number
+  maternity: number
   lifeIns: number
   healthIns: number
+  parentHealthIns: number
+  pensionLifeIns: number
   pvd: number
+  gpf: number
+  teacherFund: number
+  nssf: number
   sso: number
   rmf: number
   ssf: number
   thaiEsg: number
+  thaiEsgX: number
   homeLoan: number
-  charity: number
+  generalDonation: number
+  educationDonation: number
+  socialEnterprise: number
   easyReceipt: number
 }
 
@@ -100,14 +114,31 @@ export interface TaxBracketResult {
   txbl: number
 }
 
+export interface TaxLineItem {
+  label: string
+  amount: number
+}
+
 export interface TaxEstimate {
+  taxYear: number
+  ruleVersion: string
   ann: number
   net: number
   tax: number
+  taxBeforeCredits: number
+  withholdingCredit: number
+  taxPayable: number
+  refund: number
   mg: number
   bd: TaxBracketResult[]
   exd: number
   tot: number
+  incomeByType: TaxLineItem[]
+  expenseByType: TaxLineItem[]
+  deductionBreakdown: TaxLineItem[]
+  warnings: string[]
+  sourceUrls: string[]
+  formHint: string
   rmfR: number
   ssfR: number
   esgR: number

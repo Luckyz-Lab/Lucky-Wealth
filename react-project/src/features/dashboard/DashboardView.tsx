@@ -31,11 +31,23 @@ const EXPENSE_TONES: Record<Expense['c'], 'good' | 'warn' | 'bad' | 'info' | 'ne
   other: 'neutral',
 }
 
+const INCOME_TYPE_OPTIONS: { value: Income['tp']; label: string }[] = [
+  { value: '40_1', label: 'ม.40(1) เงินเดือน' },
+  { value: '40_2', label: 'ม.40(2) รับจ้าง' },
+  { value: '40_3', label: 'ม.40(3) ลิขสิทธิ์' },
+  { value: '40_4', label: 'ม.40(4) ดอกเบี้ย/ปันผล' },
+  { value: '40_5', label: 'ม.40(5) ให้เช่า' },
+  { value: '40_6', label: 'ม.40(6) วิชาชีพอิสระ' },
+  { value: '40_7', label: 'ม.40(7) รับเหมา' },
+  { value: '40_8', label: 'ม.40(8) ธุรกิจ/อื่นๆ' },
+]
+
 export function DashboardView({ state, actions }: Props) {
   const [tab, setTab] = useState<TabId>('income')
   const [incomeTitle, setIncomeTitle] = useState('')
   const [incomeAmount, setIncomeAmount] = useState('')
   const [incomeType, setIncomeType] = useState<Income['tp']>('40_1')
+  const [incomeWht, setIncomeWht] = useState('')
   const [expenseTitle, setExpenseTitle] = useState('')
   const [expenseAmount, setExpenseAmount] = useState('')
   const [expenseCategory, setExpenseCategory] = useState<Expense['c']>('food')
@@ -62,9 +74,10 @@ export function DashboardView({ state, actions }: Props) {
   const addIncome = () => {
     const amount = Number(incomeAmount)
     if (!incomeTitle.trim() || amount <= 0) return
-    actions.addIncome({ t: incomeTitle.trim(), a: amount, tp: incomeType })
+    actions.addIncome({ t: incomeTitle.trim(), a: amount, tp: incomeType, wht: Number(incomeWht) || 0 })
     setIncomeTitle('')
     setIncomeAmount('')
+    setIncomeWht('')
   }
 
   const addExpense = () => {
@@ -121,7 +134,7 @@ export function DashboardView({ state, actions }: Props) {
         <MetricCard label="รายรับ/เดือน" value={`฿${fmt(totals.inc)}`} tone="good" note={`${state.incomes.length} แหล่งรายได้`} />
         <MetricCard label="รายจ่าย/เดือน" value={`฿${fmt(totals.exp)}`} tone="bad" note={`เหลือ ฿${fmt(totals.inc - totals.exp)}/เดือน`} />
         <MetricCard label="สินทรัพย์รวม" value={`฿${fmt(totals.ast)}`} tone="info" note={`${state.assets.length} รายการ`} />
-        <MetricCard label="ภาษีประมาณการ" value={`฿${fmt(tax.tax)}`} tone="warn" note={`Marginal rate ${tax.mg}%`} />
+        <MetricCard label="ภาษีต้องชำระเพิ่ม" value={`฿${fmt(tax.taxPayable)}`} tone="warn" note={`ก่อนเครดิต ฿${fmt(tax.taxBeforeCredits)} · rate ${tax.mg}%`} />
         {health.map((metric) => (
           <MetricCard key={metric.id} label={metric.label} value={metric.value} tone={metric.tone} note={<Badge tone={metric.tone}>{metric.note}</Badge>} />
         ))}
@@ -152,7 +165,7 @@ export function DashboardView({ state, actions }: Props) {
         <Card title="เป้าหมายทางการเงิน" eyebrow="Goals">
           <div className="stack">
             <ProgressBar label="กองทุนฉุกเฉิน 6 เดือน" valueLabel={`฿${fmt(totals.liq)} / ฿${fmt(totals.exp * 6)}`} value={pct(totals.liq, totals.exp * 6)} tone="good" />
-            <ProgressBar label="ภาษีปีนี้ (ประมาณ)" valueLabel={`฿${fmt(tax.tax)}`} value={Math.min(100, (tax.tax / 100000) * 100)} tone="warn" />
+            <ProgressBar label="ภาษีปีนี้ (ประมาณ)" valueLabel={`฿${fmt(tax.taxPayable)}`} value={Math.min(100, (tax.taxPayable / 100000) * 100)} tone="warn" />
             <ProgressBar label="สินทรัพย์เทียบเป้า ฿1M" valueLabel={`฿${fmt(totals.ast)} / ฿1,000,000`} value={pct(totals.ast, 1000000)} tone="info" />
             <ProgressBar label="DTI เป้าไม่เกิน 40%" valueLabel={`${totals.dti.toFixed(1)}%`} value={Math.min(100, (totals.dti / 40) * 100)} tone={totals.dti <= 40 ? 'good' : 'bad'} />
           </div>
@@ -173,22 +186,22 @@ export function DashboardView({ state, actions }: Props) {
 
         {tab === 'income' && (
           <div className="entry-section">
-            <div className="form-grid form-grid--4">
+            <div className="form-grid form-grid--5">
               <Input label="แหล่งรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} placeholder="เช่น เงินเดือน, ฟรีแลนซ์" />
               <Input label="บาท/เดือน" type="number" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value)} placeholder="45000" />
+              <Input label="หัก ณ ที่จ่าย/เดือน" type="number" value={incomeWht} onChange={(event) => setIncomeWht(event.target.value)} placeholder="0" />
               <Select label="ประเภท ม.40" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])}>
-                <option value="40_1">ม.40(1) เงินเดือน</option>
-                <option value="40_2">ม.40(2) รับจ้าง</option>
-                <option value="40_8">ม.40(8) อื่นๆ</option>
+                {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
               <Button icon="ti-plus" onClick={addIncome}>เพิ่ม</Button>
             </div>
-            <DataTable headers={['รายการ', 'ประเภท', 'บาท/เดือน', '']}>
-              {state.incomes.length === 0 ? <tr><td colSpan={4}><EmptyState title="ยังไม่มีรายรับ" /></td></tr> : state.incomes.map((item) => (
+            <DataTable headers={['รายการ', 'ประเภท', 'บาท/เดือน', 'หัก ณ ที่จ่าย/เดือน', '']}>
+              {state.incomes.length === 0 ? <tr><td colSpan={5}><EmptyState title="ยังไม่มีรายรับ" /></td></tr> : state.incomes.map((item) => (
                 <tr key={item.id}>
                   <td><strong>{item.t}</strong></td>
                   <td><Badge tone="good">{item.tp}</Badge></td>
                   <td className="num">฿{fmt(item.a)}</td>
+                  <td className="num">฿{fmt(item.wht || 0)}</td>
                   <td className="action-cell"><Button variant="ghost" icon="ti-trash" onClick={() => actions.removeIncome(item.id)}>ลบ</Button></td>
                 </tr>
               ))}

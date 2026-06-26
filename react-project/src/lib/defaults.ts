@@ -5,9 +5,9 @@ export const DEFAULT_STATE: AppState = {
   storageVersion: STORAGE_VERSION,
   ownerName: 'คุณอนิรุทธ์',
   incomes: [
-    { id: 'i1', t: 'เงินเดือนวิศวกร', a: 85000, tp: '40_1' },
-    { id: 'i2', t: 'ฟรีแลนซ์', a: 20000, tp: '40_2' },
-    { id: 'i3', t: 'ปันผลหุ้น', a: 4500, tp: '40_8' },
+    { id: 'i1', t: 'เงินเดือนวิศวกร', a: 85000, tp: '40_1', wht: 4500 },
+    { id: 'i2', t: 'ฟรีแลนซ์', a: 20000, tp: '40_2', wht: 600 },
+    { id: 'i3', t: 'ปันผลหุ้น', a: 4500, tp: '40_4', wht: 450 },
   ],
   expenses: [
     { id: 'e1', t: 'ค่าอาหาร', a: 25000, c: 'food' },
@@ -30,15 +30,26 @@ export const DEFAULT_STATE: AppState = {
     personal: 60000,
     spouse: 0,
     children: 1,
+    parents: 0,
+    disabled: 0,
+    maternity: 0,
     lifeIns: 30000,
     healthIns: 15000,
+    parentHealthIns: 0,
+    pensionLifeIns: 0,
     pvd: 24000,
+    gpf: 0,
+    teacherFund: 0,
+    nssf: 0,
     sso: 9000,
     rmf: 20000,
     ssf: 15000,
     thaiEsg: 30000,
+    thaiEsgX: 0,
     homeLoan: 45000,
-    charity: 5000,
+    generalDonation: 5000,
+    educationDonation: 0,
+    socialEnterprise: 0,
     easyReceipt: 10000,
   },
   ret: { ca: 32, ra: 60, le: 85, me: 30000, inf: 2.8, rr: 4.5, sso: 6500 },
@@ -49,7 +60,7 @@ export const DEFAULT_STATE: AppState = {
   chat: [],
 }
 
-export const STORAGE_KEY = 'lucky_wealth_state_v2'
+export const STORAGE_KEY = 'lucky_wealth_state_v3'
 
 export function cloneDefaultState(): AppState {
   return structuredClone(DEFAULT_STATE)

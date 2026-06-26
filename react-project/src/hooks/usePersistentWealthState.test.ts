@@ -20,6 +20,8 @@ describe('state normalization', () => {
     expect(migrated.storageVersion).toBe(STORAGE_VERSION)
     expect(migrated.ownerName).toBe('Tester')
     expect(migrated.incomes).toHaveLength(1)
+    expect(migrated.incomes[0].wht).toBe(0)
+    expect(migrated.ded.generalDonation).toBe(DEFAULT_STATE.ded.generalDonation)
   })
 
   it('rejects imports without the minimum app shape', () => {

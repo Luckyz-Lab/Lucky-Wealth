@@ -74,7 +74,7 @@ export function generateAdvisorReply(question: string, state: AppState): string 
   return [
     '**สรุปพอร์ตแบบเร็ว**',
     `Net Worth: ฿${fmt(totals.nw)} | ออม ${totals.sr.toFixed(1)}% | DTI ${totals.dti.toFixed(1)}%`,
-    `ภาษีประมาณการปีนี้: ฿${fmt(tax.tax)} ที่ marginal rate ${tax.mg}%`,
+    `ภาษีประมาณการปีนี้: ก่อนเครดิต ฿${fmt(tax.taxBeforeCredits)} | ต้องชำระเพิ่ม ฿${fmt(tax.taxPayable)} | ขอคืน ฿${fmt(tax.refund)} ที่ marginal rate ${tax.mg}%`,
     `ลดหย่อนเพิ่มได้: ESG ฿${fmt(tax.esgR)}, SSF ฿${fmt(tax.ssfR)}, RMF ฿${fmt(tax.rmfR)}`,
     retirement.short > 0 ? `แผนเกษียณยังขาด ฿${fmt(retirement.short)}` : 'แผนเกษียณเกินเป้าในสมมติฐานนี้',
   ].join('\n')

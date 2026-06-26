@@ -19,15 +19,19 @@ describe('finance totals', () => {
 })
 
 describe('tax estimator', () => {
-  it('calculates the default tax estimate with current prototype rules', () => {
+  it('calculates the default tax estimate with 2569 estimator rules', () => {
     const tax = calcTax(DEFAULT_STATE)
 
     expect(tax.ann).toBe(1314000)
-    expect(tax.exd).toBe(657000)
+    expect(tax.exd).toBe(100000)
     expect(tax.tot).toBe(293000)
-    expect(tax.net).toBe(364000)
-    expect(tax.tax).toBe(13900)
-    expect(tax.mg).toBe(10)
+    expect(tax.net).toBe(921000)
+    expect(tax.taxBeforeCredits).toBe(99200)
+    expect(tax.withholdingCredit).toBe(66600)
+    expect(tax.taxPayable).toBe(32600)
+    expect(tax.refund).toBe(0)
+    expect(tax.mg).toBe(20)
+    expect(tax.formHint).toContain('ภ.ง.ด.90')
   })
 })
 

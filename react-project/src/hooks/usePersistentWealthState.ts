@@ -22,8 +22,27 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+const INCOME_TYPES = new Set(['40_1', '40_2', '40_3', '40_4', '40_5', '40_6', '40_7', '40_8'])
+
 function isIncome(value: unknown): value is Income {
-  return isRecord(value) && typeof value.id === 'string' && typeof value.t === 'string' && isNumber(value.a)
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.t === 'string' &&
+    isNumber(value.a) &&
+    typeof value.tp === 'string' &&
+    INCOME_TYPES.has(value.tp)
+  )
+}
+
+function normalizeIncome(value: Income): Income {
+  return {
+    id: value.id,
+    t: value.t,
+    a: value.a,
+    tp: value.tp,
+    wht: isNumber(value.wht) ? value.wht : 0,
+  }
 }
 
 function isExpense(value: unknown): value is Expense {
@@ -44,15 +63,26 @@ function normalizeDeductions(value: unknown, fallback: Deductions): Deductions {
     personal: isNumber(value.personal) ? value.personal : fallback.personal,
     spouse: isNumber(value.spouse) ? value.spouse : fallback.spouse,
     children: isNumber(value.children) ? value.children : fallback.children,
+    parents: isNumber(value.parents) ? value.parents : fallback.parents,
+    disabled: isNumber(value.disabled) ? value.disabled : fallback.disabled,
+    maternity: isNumber(value.maternity) ? value.maternity : fallback.maternity,
     lifeIns: isNumber(value.lifeIns) ? value.lifeIns : fallback.lifeIns,
     healthIns: isNumber(value.healthIns) ? value.healthIns : fallback.healthIns,
+    parentHealthIns: isNumber(value.parentHealthIns) ? value.parentHealthIns : fallback.parentHealthIns,
+    pensionLifeIns: isNumber(value.pensionLifeIns) ? value.pensionLifeIns : fallback.pensionLifeIns,
     pvd: isNumber(value.pvd) ? value.pvd : fallback.pvd,
+    gpf: isNumber(value.gpf) ? value.gpf : fallback.gpf,
+    teacherFund: isNumber(value.teacherFund) ? value.teacherFund : fallback.teacherFund,
+    nssf: isNumber(value.nssf) ? value.nssf : fallback.nssf,
     sso: isNumber(value.sso) ? value.sso : fallback.sso,
     rmf: isNumber(value.rmf) ? value.rmf : fallback.rmf,
     ssf: isNumber(value.ssf) ? value.ssf : fallback.ssf,
     thaiEsg: isNumber(value.thaiEsg) ? value.thaiEsg : fallback.thaiEsg,
+    thaiEsgX: isNumber(value.thaiEsgX) ? value.thaiEsgX : fallback.thaiEsgX,
     homeLoan: isNumber(value.homeLoan) ? value.homeLoan : fallback.homeLoan,
-    charity: isNumber(value.charity) ? value.charity : fallback.charity,
+    generalDonation: isNumber(value.generalDonation) ? value.generalDonation : isNumber(value.charity) ? value.charity : fallback.generalDonation,
+    educationDonation: isNumber(value.educationDonation) ? value.educationDonation : fallback.educationDonation,
+    socialEnterprise: isNumber(value.socialEnterprise) ? value.socialEnterprise : fallback.socialEnterprise,
     easyReceipt: isNumber(value.easyReceipt) ? value.easyReceipt : fallback.easyReceipt,
   }
 }
@@ -95,7 +125,7 @@ export function normalizeState(value: unknown): AppState {
   return {
     storageVersion: STORAGE_VERSION,
     ownerName: typeof value.ownerName === 'string' ? value.ownerName : fallback.ownerName,
-    incomes: Array.isArray(value.incomes) ? value.incomes.filter(isIncome) : fallback.incomes,
+    incomes: Array.isArray(value.incomes) ? value.incomes.filter(isIncome).map(normalizeIncome) : fallback.incomes,
     expenses: Array.isArray(value.expenses) ? value.expenses.filter(isExpense) : fallback.expenses,
     assets: Array.isArray(value.assets) ? value.assets.filter(isAsset) : fallback.assets,
     debts: Array.isArray(value.debts) ? value.debts.filter(isDebt) : fallback.debts,
@@ -108,7 +138,7 @@ export function normalizeState(value: unknown): AppState {
 
 export function loadStoredState(): AppState {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('pwh_v3')
+  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('lucky_wealth_state_v2') ?? localStorage.getItem('pwh_v3')
     return stored ? normalizeState(JSON.parse(stored)) : cloneDefaultState()
   } catch {
     return cloneDefaultState()
@@ -136,7 +166,7 @@ export function usePersistentWealthState() {
   }, [persist])
 
   const actions = useMemo(() => ({
-    addIncome: (payload: Omit<Income, 'id'>) => updateState((s) => ({ ...s, incomes: [...s.incomes, { ...payload, id: uid('i') }] })),
+    addIncome: (payload: Omit<Income, 'id'>) => updateState((s) => ({ ...s, incomes: [...s.incomes, { ...payload, wht: payload.wht || 0, id: uid('i') }] })),
     removeIncome: (id: string) => updateState((s) => ({ ...s, incomes: s.incomes.filter((item) => item.id !== id) })),
     addExpense: (payload: Omit<Expense, 'id'>) => updateState((s) => ({ ...s, expenses: [...s.expenses, { ...payload, id: uid('e') }] })),
     removeExpense: (id: string) => updateState((s) => ({ ...s, expenses: s.expenses.filter((item) => item.id !== id) })),
