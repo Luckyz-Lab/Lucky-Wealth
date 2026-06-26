@@ -1,0 +1,6 @@
+export { fmt, pct } from '../domain/format'
+export { calcTotals } from '../domain/finance'
+export { calcTax } from '../domain/tax'
+export { loanCalc } from '../domain/loans'
+export { calcRetirement } from '../domain/retirement'
+export { generateAdvisorReply as buildAIContext } from '../domain/advisor'

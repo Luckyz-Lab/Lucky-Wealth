@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.*
+*.local
+
+react-project/node_modules/
+react-project/dist/
