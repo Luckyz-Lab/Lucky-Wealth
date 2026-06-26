@@ -187,10 +187,10 @@ export function DashboardView({ state, actions }: Props) {
         {tab === 'income' && (
           <div className="entry-section">
             <div className="form-grid form-grid--5">
-              <Input label="แหล่งรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} placeholder="เช่น เงินเดือน, ฟรีแลนซ์" />
-              <Input label="บาท/เดือน" type="number" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value)} placeholder="45000" />
-              <Input label="หัก ณ ที่จ่าย/เดือน" type="number" value={incomeWht} onChange={(event) => setIncomeWht(event.target.value)} placeholder="0" />
-              <Select label="ประเภท ม.40" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])}>
+              <Input label="แหล่งรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} placeholder="เช่น เงินเดือน, ฟรีแลนซ์" info="ตั้งชื่อรายการรายได้ เพื่อใช้แยกแหล่งที่มาในตารางและการคำนวณภาษี" />
+              <Input label="บาท/เดือน" type="number" inputMode="decimal" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value)} placeholder="45000" info="กรอกรายได้เฉลี่ยต่อเดือนก่อนหักภาษี ระบบจะรวมเป็นรายได้ทั้งปี" />
+              <Input label="หัก ณ ที่จ่าย/เดือน" type="number" inputMode="decimal" value={incomeWht} onChange={(event) => setIncomeWht(event.target.value)} placeholder="0" info="กรอกภาษีที่ถูกหักไว้ต่อเดือนจากสลิปหรือใบ 50 ทวิ เพื่อคำนวณยอดต้องจ่ายเพิ่ม/ขอคืน" />
+              <Select label="ประเภท ม.40" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามกฎหมายภาษีไทย มีผลต่อการหักค่าใช้จ่าย">
                 {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
               <Button icon="ti-plus" onClick={addIncome}>เพิ่ม</Button>
@@ -212,9 +212,9 @@ export function DashboardView({ state, actions }: Props) {
         {tab === 'expense' && (
           <div className="entry-section">
             <div className="form-grid form-grid--4">
-              <Input label="รายการ" value={expenseTitle} onChange={(event) => setExpenseTitle(event.target.value)} placeholder="เช่น ค่าอาหาร, ค่าเช่า" />
-              <Input label="บาท/เดือน" type="number" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} placeholder="5000" />
-              <Select label="หมวด" value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value as Expense['c'])}>
+              <Input label="รายการ" value={expenseTitle} onChange={(event) => setExpenseTitle(event.target.value)} placeholder="เช่น ค่าอาหาร, ค่าเช่า" info="ตั้งชื่อรายจ่ายประจำเพื่อใช้ติดตาม cashflow" />
+              <Input label="บาท/เดือน" type="number" inputMode="decimal" value={expenseAmount} onChange={(event) => setExpenseAmount(event.target.value)} placeholder="5000" info="กรอกยอดใช้จ่ายเฉลี่ยต่อเดือน" />
+              <Select label="หมวด" value={expenseCategory} onChange={(event) => setExpenseCategory(event.target.value as Expense['c'])} info="เลือกหมวดเพื่อให้กราฟและสรุปรายจ่ายแยกประเภทได้ชัดเจน">
                 {Object.entries(EXPENSE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </Select>
               <Button icon="ti-plus" onClick={addExpense}>เพิ่ม</Button>
@@ -235,10 +235,10 @@ export function DashboardView({ state, actions }: Props) {
         {tab === 'asset' && (
           <div className="entry-section">
             <div className="form-grid form-grid--5">
-              <Input label="ชื่อสินทรัพย์" value={assetTitle} onChange={(event) => setAssetTitle(event.target.value)} placeholder="เช่น บัญชีออมทรัพย์" />
-              <Input label="มูลค่า" type="number" value={assetValue} onChange={(event) => setAssetValue(event.target.value)} placeholder="100000" />
-              <Input label="ผลตอบแทน %/ปี" type="number" step="0.1" value={assetReturn} onChange={(event) => setAssetReturn(event.target.value)} placeholder="3.5" />
-              <Select label="ประเภท" value={assetType} onChange={(event) => setAssetType(event.target.value as Asset['tp'])}>
+              <Input label="ชื่อสินทรัพย์" value={assetTitle} onChange={(event) => setAssetTitle(event.target.value)} placeholder="เช่น บัญชีออมทรัพย์" info="ตั้งชื่อสินทรัพย์ เช่น เงินฝาก หุ้น กองทุน หรืออสังหาฯ" />
+              <Input label="มูลค่า" type="number" inputMode="decimal" value={assetValue} onChange={(event) => setAssetValue(event.target.value)} placeholder="100000" info="กรอกมูลค่าปัจจุบันโดยประมาณของสินทรัพย์" />
+              <Input label="ผลตอบแทน %/ปี" type="number" inputMode="decimal" step="0.1" value={assetReturn} onChange={(event) => setAssetReturn(event.target.value)} placeholder="3.5" info="กรอกผลตอบแทนคาดการณ์ต่อปี ใช้ประกอบการจำลองแผนเกษียณ" />
+              <Select label="ประเภท" value={assetType} onChange={(event) => setAssetType(event.target.value as Asset['tp'])} info="เลือกประเภทสินทรัพย์เพื่อแยกสภาพคล่องและพอร์ตลงทุน">
                 <option value="deposit">เงินฝาก</option>
                 <option value="stock">หุ้น</option>
                 <option value="fund">กองทุน</option>
@@ -265,10 +265,10 @@ export function DashboardView({ state, actions }: Props) {
         {tab === 'debt' && (
           <div className="entry-section">
             <div className="form-grid form-grid--5">
-              <Input label="ชื่อหนี้สิน" value={debtTitle} onChange={(event) => setDebtTitle(event.target.value)} placeholder="เช่น ผ่อนบ้าน, ผ่อนรถ" />
-              <Input label="ยอดคงเหลือ" type="number" value={debtBalance} onChange={(event) => setDebtBalance(event.target.value)} placeholder="2000000" />
-              <Input label="ผ่อน/เดือน" type="number" value={debtPayment} onChange={(event) => setDebtPayment(event.target.value)} placeholder="15000" />
-              <Input label="ดอกเบี้ย %/ปี" type="number" step="0.1" value={debtRate} onChange={(event) => setDebtRate(event.target.value)} placeholder="4.5" />
+              <Input label="ชื่อหนี้สิน" value={debtTitle} onChange={(event) => setDebtTitle(event.target.value)} placeholder="เช่น ผ่อนบ้าน, ผ่อนรถ" info="ตั้งชื่อหนี้เพื่อแยกภาระผ่อนแต่ละก้อน" />
+              <Input label="ยอดคงเหลือ" type="number" inputMode="decimal" value={debtBalance} onChange={(event) => setDebtBalance(event.target.value)} placeholder="2000000" info="กรอกยอดหนี้คงเหลือล่าสุด" />
+              <Input label="ผ่อน/เดือน" type="number" inputMode="decimal" value={debtPayment} onChange={(event) => setDebtPayment(event.target.value)} placeholder="15000" info="กรอกยอดผ่อนขั้นต่ำหรือยอดที่จ่ายจริงต่อเดือน" />
+              <Input label="ดอกเบี้ย %/ปี" type="number" inputMode="decimal" step="0.1" value={debtRate} onChange={(event) => setDebtRate(event.target.value)} placeholder="4.5" info="กรอกอัตราดอกเบี้ยต่อปีเพื่อใช้จำลองแผนปิดหนี้" />
               <Button icon="ti-plus" onClick={addDebt}>เพิ่ม</Button>
             </div>
             <DataTable headers={['หนี้สิน', 'ผ่อน/เดือน', 'ดอกเบี้ย', 'ยอดคงเหลือ', '']}>

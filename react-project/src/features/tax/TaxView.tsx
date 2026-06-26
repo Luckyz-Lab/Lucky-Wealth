@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { AppState, Deductions } from '../../types'
+import type { AppState, Deductions, Income } from '../../types'
 import type { WealthActions } from '../../hooks/usePersistentWealthState'
 import { fmt, pct } from '../../domain/format'
 import { calcTax } from '../../domain/tax'
-import { Badge, Card, DataTable, Input, MetricCard, ProgressBar } from '../../components/ui'
+import { Badge, Button, Card, DataTable, Input, MetricCard, ProgressBar, Select } from '../../components/ui'
 import { PageHeader } from '../../components/layout'
 
 interface Props {
@@ -11,36 +12,60 @@ interface Props {
   actions: WealthActions
 }
 
-const DED_ITEMS: { key: keyof Deductions; label: string; max: number; step?: number; locked?: boolean }[] = [
-  { key: 'personal', label: 'ค่าลดหย่อนส่วนตัว', max: 60000, locked: true },
-  { key: 'spouse', label: 'คู่สมรส', max: 60000 },
-  { key: 'children', label: 'บุตร (จำนวนคน)', max: 5, step: 1 },
-  { key: 'parents', label: 'บิดามารดา (จำนวนคน)', max: 4, step: 1 },
-  { key: 'disabled', label: 'ผู้พิการ/ทุพพลภาพ (จำนวนคน)', max: 5, step: 1 },
-  { key: 'maternity', label: 'ฝากครรภ์และคลอดบุตร', max: 60000 },
-  { key: 'lifeIns', label: 'ประกันชีวิต', max: 100000 },
-  { key: 'healthIns', label: 'ประกันสุขภาพ', max: 25000 },
-  { key: 'parentHealthIns', label: 'ประกันสุขภาพบิดามารดา', max: 15000 },
-  { key: 'pensionLifeIns', label: 'ประกันชีวิตแบบบำนาญ', max: 200000 },
-  { key: 'pvd', label: 'กองทุนสำรอง PVD', max: 500000 },
-  { key: 'gpf', label: 'กบข.', max: 500000 },
-  { key: 'teacherFund', label: 'กองทุนสงเคราะห์ครู', max: 500000 },
-  { key: 'nssf', label: 'กอช.', max: 30000 },
-  { key: 'sso', label: 'ประกันสังคม', max: 9000 },
-  { key: 'rmf', label: 'RMF', max: 500000 },
-  { key: 'ssf', label: 'SSF', max: 200000 },
-  { key: 'thaiEsg', label: 'Thai ESG Fund', max: 300000 },
-  { key: 'thaiEsgX', label: 'Thai ESGX', max: 300000 },
-  { key: 'homeLoan', label: 'ดอกเบี้ยกู้บ้าน', max: 100000 },
-  { key: 'educationDonation', label: 'บริจาคการศึกษา/กีฬา', max: 100000 },
-  { key: 'generalDonation', label: 'บริจาคทั่วไป', max: 100000 },
-  { key: 'socialEnterprise', label: 'ลงทุนวิสาหกิจเพื่อสังคม', max: 100000 },
-  { key: 'easyReceipt', label: 'Easy E-Receipt', max: 50000 },
+const INCOME_TYPE_OPTIONS: { value: Income['tp']; label: string }[] = [
+  { value: '40_1', label: 'ม.40(1) เงินเดือน' },
+  { value: '40_2', label: 'ม.40(2) รับจ้าง/ฟรีแลนซ์' },
+  { value: '40_3', label: 'ม.40(3) ลิขสิทธิ์' },
+  { value: '40_4', label: 'ม.40(4) ดอกเบี้ย/เงินปันผล' },
+  { value: '40_5', label: 'ม.40(5) ให้เช่าทรัพย์สิน' },
+  { value: '40_6', label: 'ม.40(6) วิชาชีพอิสระ' },
+  { value: '40_7', label: 'ม.40(7) รับเหมา' },
+  { value: '40_8', label: 'ม.40(8) ธุรกิจ/อื่นๆ' },
+]
+
+const DED_ITEMS: { key: keyof Deductions; label: string; max: number; step?: number; locked?: boolean; info: string }[] = [
+  { key: 'personal', label: 'ค่าลดหย่อนส่วนตัว', max: 60000, locked: true, info: 'สิทธิพื้นฐานของผู้มีเงินได้ ระบบล็อกไว้ที่ 60,000 บาท' },
+  { key: 'spouse', label: 'คู่สมรส', max: 60000, info: 'กรอกได้เมื่อคู่สมรสไม่มีเงินได้ตามเงื่อนไขภาษี' },
+  { key: 'children', label: 'บุตร (จำนวนคน)', max: 5, step: 1, info: 'กรอกเป็นจำนวนคน ระบบคูณ 30,000 บาทต่อคน' },
+  { key: 'parents', label: 'บิดามารดา (จำนวนคน)', max: 4, step: 1, info: 'กรอกจำนวนบิดามารดาที่เข้าเงื่อนไข ระบบคูณ 30,000 บาทต่อคน' },
+  { key: 'disabled', label: 'ผู้พิการ/ทุพพลภาพ (จำนวนคน)', max: 5, step: 1, info: 'กรอกจำนวนคนที่อุปการะและมีเอกสารตามเงื่อนไข' },
+  { key: 'maternity', label: 'ฝากครรภ์และคลอดบุตร', max: 60000, info: 'กรอกยอดใบเสร็จจริง ไม่เกินเพดานที่ระบบกำหนด' },
+  { key: 'lifeIns', label: 'ประกันชีวิต', max: 100000, info: 'กรอกเบี้ยประกันชีวิตที่มีหนังสือรับรองลดหย่อน' },
+  { key: 'healthIns', label: 'ประกันสุขภาพ', max: 25000, info: 'กรอกเบี้ยประกันสุขภาพตนเอง ระบบรวมกับประกันชีวิตภายใต้เพดานหลัก' },
+  { key: 'parentHealthIns', label: 'ประกันสุขภาพบิดามารดา', max: 15000, info: 'กรอกเบี้ยประกันสุขภาพพ่อแม่ที่เข้าเงื่อนไข' },
+  { key: 'pensionLifeIns', label: 'ประกันชีวิตแบบบำนาญ', max: 200000, info: 'กรอกเบี้ยประกันบำนาญ ระบบจำกัดตามเพดานประมาณการ' },
+  { key: 'pvd', label: 'กองทุนสำรอง PVD', max: 500000, info: 'กรอกเงินสะสมกองทุนสำรองเลี้ยงชีพทั้งปี' },
+  { key: 'gpf', label: 'กบข.', max: 500000, info: 'กรอกเงินสะสม กบข. ถ้ามี' },
+  { key: 'teacherFund', label: 'กองทุนสงเคราะห์ครู', max: 500000, info: 'กรอกเงินสะสมกองทุนสงเคราะห์ครูโรงเรียนเอกชนถ้ามี' },
+  { key: 'nssf', label: 'กอช.', max: 30000, info: 'กรอกเงินสะสมกองทุนการออมแห่งชาติถ้ามี' },
+  { key: 'sso', label: 'ประกันสังคม', max: 9000, info: 'กรอกเงินสมทบประกันสังคมทั้งปี โดยทั่วไปสูงสุด 9,000 บาท' },
+  { key: 'rmf', label: 'RMF', max: 500000, info: 'กรอกยอดซื้อ RMF ทั้งปี ต้องตรวจเงื่อนไขการถือครองก่อนยื่นจริง' },
+  { key: 'ssf', label: 'SSF', max: 200000, info: 'กรอกยอดซื้อ SSF ทั้งปี ต้องตรวจเงื่อนไขกองทุนและเพดานรวม' },
+  { key: 'thaiEsg', label: 'Thai ESG Fund', max: 300000, info: 'กรอกยอดซื้อ Thai ESG ที่มีเอกสารรับรอง' },
+  { key: 'thaiEsgX', label: 'Thai ESGX', max: 300000, info: 'กรอกยอด Thai ESGX ถ้ามี ต้องตรวจประกาศปีภาษีนั้นอีกครั้ง' },
+  { key: 'homeLoan', label: 'ดอกเบี้ยกู้บ้าน', max: 100000, info: 'กรอกเฉพาะดอกเบี้ยกู้ซื้อที่อยู่อาศัยทั้งปี ไม่ใช่ยอดผ่อนทั้งหมด' },
+  { key: 'educationDonation', label: 'บริจาคการศึกษา/กีฬา', max: 100000, info: 'กรอกยอดบริจาคที่มีเอกสาร ระบบคำนวณแบบสองเท่าภายใต้เพดาน' },
+  { key: 'generalDonation', label: 'บริจาคทั่วไป', max: 100000, info: 'กรอกยอดบริจาคทั่วไปที่มีหลักฐาน' },
+  { key: 'socialEnterprise', label: 'ลงทุนวิสาหกิจเพื่อสังคม', max: 100000, info: 'กรอกยอดลงทุนที่เข้าเงื่อนไขลดหย่อน' },
+  { key: 'easyReceipt', label: 'Easy E-Receipt', max: 50000, info: 'กรอกยอดใช้จ่ายตามมาตรการและช่วงเวลาที่ประกาศสำหรับปีภาษีนั้น' },
 ]
 
 export function TaxView({ state, actions }: Props) {
+  const [incomeTitle, setIncomeTitle] = useState('เงินเดือน')
+  const [incomeAmount, setIncomeAmount] = useState('')
+  const [incomeWht, setIncomeWht] = useState('')
+  const [incomeType, setIncomeType] = useState<Income['tp']>('40_1')
   const tax = calcTax(state)
   const marginalTone = tax.mg <= 10 ? 'good' : tax.mg <= 25 ? 'warn' : 'bad'
+
+  const addIncome = () => {
+    const amount = Number(incomeAmount)
+    if (!incomeTitle.trim() || amount <= 0) return
+    actions.addIncome({ t: incomeTitle.trim(), a: amount, wht: Number(incomeWht) || 0, tp: incomeType })
+    setIncomeTitle('')
+    setIncomeAmount('')
+    setIncomeWht('')
+  }
 
   return (
     <>
@@ -59,6 +84,30 @@ export function TaxView({ state, actions }: Props) {
         </div>
       </div>
 
+      <Card title="รายได้ที่ใช้คำนวณภาษี" eyebrow="Income input">
+        <div className="form-grid form-grid--5">
+          <Input label="ชื่อรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} info="ตั้งชื่อให้จำง่าย เช่น เงินเดือนบริษัท, ฟรีแลนซ์, เงินปันผล" placeholder="เงินเดือน" />
+          <Input label="จำนวนเงิน/เดือน" type="number" inputMode="decimal" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value)} info="กรอกเงินเดือนหรือรายได้เฉลี่ยต่อเดือนก่อนหักภาษี ระบบจะคูณ 12 เป็นรายปี" placeholder="85000" />
+          <Input label="ภาษีหัก ณ ที่จ่าย/เดือน" type="number" inputMode="decimal" value={incomeWht} onChange={(event) => setIncomeWht(event.target.value)} info="กรอกยอดภาษีที่ถูกหักไว้ในแต่ละเดือนจากสลิปเงินเดือนหรือใบ 50 ทวิ" placeholder="4500" />
+          <Select label="ประเภทเงินได้" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามมาตรา 40 เพื่อให้ระบบเลือกวิธีคำนวณค่าใช้จ่ายที่เหมาะสม">
+            {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </Select>
+          <Button icon="ti-plus" onClick={addIncome}>เพิ่มรายได้</Button>
+        </div>
+
+        <DataTable headers={['รายการ', 'ประเภท', 'บาท/เดือน', 'หัก ณ ที่จ่าย/เดือน', '']}>
+          {state.incomes.map((item) => (
+            <tr key={item.id}>
+              <td><strong>{item.t}</strong></td>
+              <td><Badge tone="info">{item.tp}</Badge></td>
+              <td className="num">฿{fmt(item.a)}</td>
+              <td className="num">฿{fmt(item.wht || 0)}</td>
+              <td className="action-cell"><Button variant="ghost" icon="ti-trash" onClick={() => actions.removeIncome(item.id)}>ลบ</Button></td>
+            </tr>
+          ))}
+        </DataTable>
+      </Card>
+
       <div className="content-grid content-grid--balanced">
         <Card title="รายการลดหย่อน" eyebrow="Inputs">
           <div className="deduction-grid">
@@ -72,6 +121,7 @@ export function TaxView({ state, actions }: Props) {
                 step={item.step || 1}
                 value={state.ded[item.key]}
                 readOnly={item.locked}
+                info={item.info}
                 helper={item.locked ? 'ค่าคงที่พื้นฐาน' : `เพดาน ${fmt(item.max)}`}
                 onChange={(event) => actions.updateDeductions(item.key, Number(event.target.value) || 0)}
               />
