@@ -52,27 +52,32 @@ const DED_ITEMS: { key: keyof Deductions; label: string; max: number; step?: num
 
 export function TaxView({ state, actions }: Props) {
   const [incomeTitle, setIncomeTitle] = useState('เงินเดือน')
-  const [incomeAmount, setIncomeAmount] = useState('')
-  const [incomeWht, setIncomeWht] = useState('')
+  const [annualIncomeAmount, setAnnualIncomeAmount] = useState('')
+  const [annualWht, setAnnualWht] = useState('')
   const [incomeType, setIncomeType] = useState<Income['tp']>('40_1')
   const tax = calcTax(state)
   const marginalTone = tax.mg <= 10 ? 'good' : tax.mg <= 25 ? 'warn' : 'bad'
 
   const addIncome = () => {
-    const amount = Number(incomeAmount)
-    if (!incomeTitle.trim() || amount <= 0) return
-    actions.addIncome({ t: incomeTitle.trim(), a: amount, wht: Number(incomeWht) || 0, tp: incomeType })
+    const annualAmount = Number(annualIncomeAmount)
+    if (!incomeTitle.trim() || annualAmount <= 0) return
+    actions.addIncome({
+      t: incomeTitle.trim(),
+      a: Math.round(annualAmount / 12),
+      wht: Math.round((Number(annualWht) || 0) / 12),
+      tp: incomeType,
+    })
     setIncomeTitle('')
-    setIncomeAmount('')
-    setIncomeWht('')
+    setAnnualIncomeAmount('')
+    setAnnualWht('')
   }
 
   return (
     <>
       <PageHeader
-        eyebrow="Tax estimator"
-        title="วางแผนภาษีสรรพากร"
-        description="คำนวณภาษีเงินได้บุคคลธรรมดาแบบประมาณการ พร้อม breakdown, เครดิตหัก ณ ที่จ่าย และข้อจำกัดของสูตร"
+        eyebrow="Thai PIT estimator"
+        title="คำนวณภาษี + ค่าลดหย่อน"
+        description="กรอกรายได้ต่อปีและค่าลดหย่อนตามขั้นตอน ระบบจะแสดงภาษีขั้นบันได เครดิตหัก ณ ที่จ่าย และยอดที่คาดว่าต้องชำระเพิ่มหรือขอคืน"
         meta={`ปีภาษี ${tax.taxYear} · ${tax.ruleVersion}`}
       />
 
@@ -84,32 +89,35 @@ export function TaxView({ state, actions }: Props) {
         </div>
       </div>
 
-      <Card title="รายได้ที่ใช้คำนวณภาษี" eyebrow="Income input">
-        <div className="form-grid form-grid--5">
-          <Input label="ชื่อรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} info="ตั้งชื่อให้จำง่าย เช่น เงินเดือนบริษัท, ฟรีแลนซ์, เงินปันผล" placeholder="เงินเดือน" />
-          <Input label="จำนวนเงิน/เดือน" type="number" inputMode="decimal" value={incomeAmount} onChange={(event) => setIncomeAmount(event.target.value)} info="กรอกเงินเดือนหรือรายได้เฉลี่ยต่อเดือนก่อนหักภาษี ระบบจะคูณ 12 เป็นรายปี" placeholder="85000" />
-          <Input label="ภาษีหัก ณ ที่จ่าย/เดือน" type="number" inputMode="decimal" value={incomeWht} onChange={(event) => setIncomeWht(event.target.value)} info="กรอกยอดภาษีที่ถูกหักไว้ในแต่ละเดือนจากสลิปเงินเดือนหรือใบ 50 ทวิ" placeholder="4500" />
-          <Select label="ประเภทเงินได้" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามมาตรา 40 เพื่อให้ระบบเลือกวิธีคำนวณค่าใช้จ่ายที่เหมาะสม">
-            {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </Select>
-          <Button icon="ti-plus" onClick={addIncome}>เพิ่มรายได้</Button>
-        </div>
+      <div className="tax-workspace">
+        <div className="tax-steps">
+          <Card title="1. รายได้ต่อปี" eyebrow="Step 1">
+            <p className="section-copy">กรอกเงินเดือนหรือรายได้รวมตลอดปี แยกตามประเภทเงินได้เพื่อให้ระบบหักค่าใช้จ่ายได้ถูกทิศทาง</p>
+            <div className="form-grid form-grid--5">
+              <Input label="ชื่อรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} info="ตั้งชื่อให้จำง่าย เช่น เงินเดือนบริษัท, ฟรีแลนซ์, เงินปันผล" placeholder="เงินเดือน" />
+              <Input label="รายได้ต่อปี" type="number" inputMode="decimal" value={annualIncomeAmount} onChange={(event) => setAnnualIncomeAmount(event.target.value)} info="กรอกรายได้รวมทั้งปีก่อนหักภาษี เช่น เงินเดือน 50,000 บาทต่อเดือน ให้กรอก 600000" placeholder="600000" />
+              <Input label="หัก ณ ที่จ่ายต่อปี" type="number" inputMode="decimal" value={annualWht} onChange={(event) => setAnnualWht(event.target.value)} info="กรอกภาษีที่ถูกหักไว้ทั้งปีจากสลิปหรือใบ 50 ทวิ ถ้าไม่มีให้ใส่ 0" placeholder="0" />
+              <Select label="ประเภทเงินได้" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามมาตรา 40 มีผลต่อวิธีหักค่าใช้จ่าย">
+                {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </Select>
+              <Button icon="ti-plus" onClick={addIncome}>เพิ่มรายได้</Button>
+            </div>
 
-        <DataTable headers={['รายการ', 'ประเภท', 'บาท/เดือน', 'หัก ณ ที่จ่าย/เดือน', '']}>
-          {state.incomes.map((item) => (
-            <tr key={item.id}>
-              <td><strong>{item.t}</strong></td>
-              <td><Badge tone="info">{item.tp}</Badge></td>
-              <td className="num">฿{fmt(item.a)}</td>
-              <td className="num">฿{fmt(item.wht || 0)}</td>
-              <td className="action-cell"><Button variant="ghost" icon="ti-trash" onClick={() => actions.removeIncome(item.id)}>ลบ</Button></td>
-            </tr>
-          ))}
-        </DataTable>
-      </Card>
+            <DataTable headers={['รายการ', 'ประเภท', 'รายได้ต่อปี', 'หัก ณ ที่จ่ายต่อปี', '']}>
+              {state.incomes.map((item) => (
+                <tr key={item.id}>
+                  <td><strong>{item.t}</strong></td>
+                  <td><Badge tone="info">{item.tp}</Badge></td>
+                  <td className="num">฿{fmt(item.a * 12)}</td>
+                  <td className="num">฿{fmt((item.wht || 0) * 12)}</td>
+                  <td className="action-cell"><Button variant="ghost" icon="ti-trash" onClick={() => actions.removeIncome(item.id)}>ลบ</Button></td>
+                </tr>
+              ))}
+            </DataTable>
+          </Card>
 
-      <div className="content-grid content-grid--balanced">
-        <Card title="รายการลดหย่อน" eyebrow="Inputs">
+          <Card title="2. ค่าลดหย่อน" eyebrow="Step 2-4">
+            <p className="section-copy">กรอกเฉพาะยอดที่มีเอกสารหรือเข้าเงื่อนไขจริง ช่องที่เป็นจำนวนคนให้กรอกเป็นตัวเลขจำนวนคน</p>
           <div className="deduction-grid">
             {DED_ITEMS.map((item) => (
               <Input
@@ -128,21 +136,33 @@ export function TaxView({ state, actions }: Props) {
             ))}
           </div>
         </Card>
+        </div>
 
-        <Card title="ผลการคำนวณ" eyebrow="Estimate">
-          <div className="metric-grid metric-grid--compact">
-            <MetricCard label="รายได้สุทธิ" value={`฿${fmt(tax.net)}`} note="หลังหักค่าใช้จ่ายและลดหย่อน" />
-            <MetricCard label="ภาษีก่อนเครดิต" value={`฿${fmt(tax.taxBeforeCredits)}`} tone="warn" note="ตามขั้นบันไดภาษี" />
-            <MetricCard label="หัก ณ ที่จ่าย" value={`฿${fmt(tax.withholdingCredit)}`} tone="info" note="รวมจากรายได้ที่บันทึก" />
-            <MetricCard label={tax.refund > 0 ? 'คาดว่าขอคืนได้' : 'ต้องชำระเพิ่ม'} value={`฿${fmt(tax.refund > 0 ? tax.refund : tax.taxPayable)}`} tone={tax.refund > 0 ? 'good' : 'bad'} note="หลังเครดิตภาษีหัก ณ ที่จ่าย" />
-            <MetricCard label="Marginal Rate" value={`${tax.mg}%`} tone={marginalTone} note={<Badge tone={marginalTone}>อัตราสูงสุด</Badge>} />
-            <MetricCard label="ลดหย่อนรวม" value={`฿${fmt(tax.tot)}`} tone="good" note="รวมรายการที่บันทึก" />
-          </div>
-          <div className="stack">
-            <ProgressBar label="หักค่าใช้จ่าย 50%" valueLabel={`฿${fmt(tax.exd)}`} value={pct(tax.exd, tax.ann)} tone="info" />
-            <ProgressBar label="ลดหย่อนรวม" valueLabel={`฿${fmt(tax.tot)}`} value={pct(tax.tot, tax.ann)} tone="good" />
-          </div>
-        </Card>
+        <aside className="tax-summary" aria-label="ผลการคำนวณภาษี">
+          <Card title="ผลการคำนวณภาษี" eyebrow="Live estimate">
+            <div className="summary-hero">
+              <span>{tax.refund > 0 ? 'คาดว่าขอคืนได้' : 'ต้องชำระเพิ่ม'}</span>
+              <strong>฿{fmt(tax.refund > 0 ? tax.refund : tax.taxPayable)}</strong>
+              <small>หลังหักเครดิตภาษี ณ ที่จ่าย</small>
+            </div>
+            <div className="summary-list">
+              <div><span>รายได้รวม</span><strong>฿{fmt(tax.ann)}</strong></div>
+              <div><span>หักค่าใช้จ่าย</span><strong>฿{fmt(tax.exd)}</strong></div>
+              <div><span>ลดหย่อนรวม</span><strong>฿{fmt(tax.tot)}</strong></div>
+              <div><span>รายได้สุทธิที่เสียภาษี</span><strong>฿{fmt(tax.net)}</strong></div>
+              <div><span>ภาษีก่อนเครดิต</span><strong>฿{fmt(tax.taxBeforeCredits)}</strong></div>
+              <div><span>หัก ณ ที่จ่าย</span><strong>฿{fmt(tax.withholdingCredit)}</strong></div>
+            </div>
+            <div className="metric-grid metric-grid--compact">
+              <MetricCard label="Marginal" value={`${tax.mg}%`} tone={marginalTone} note={<Badge tone={marginalTone}>อัตราสูงสุด</Badge>} />
+              <MetricCard label="Effective" value={`${tax.ann > 0 ? ((tax.taxBeforeCredits / tax.ann) * 100).toFixed(1) : '0.0'}%`} note="ภาษีต่อรายได้รวม" />
+            </div>
+            <div className="stack">
+              <ProgressBar label="ค่าใช้จ่ายที่หักได้" valueLabel={`฿${fmt(tax.exd)}`} value={pct(tax.exd, tax.ann)} tone="info" />
+              <ProgressBar label="ลดหย่อนรวม" valueLabel={`฿${fmt(tax.tot)}`} value={pct(tax.tot, tax.ann)} tone="good" />
+            </div>
+          </Card>
+        </aside>
       </div>
 
       <div className="content-grid content-grid--balanced">
