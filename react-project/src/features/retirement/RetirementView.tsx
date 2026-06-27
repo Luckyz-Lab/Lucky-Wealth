@@ -3,7 +3,7 @@ import type { AppState, RetirementParams, ViewId } from '../../types'
 import type { WealthActions } from '../../hooks/usePersistentWealthState'
 import { fmt } from '../../domain/format'
 import { calcRetirement } from '../../domain/retirement'
-import { Card, MetricCard, RelatedTools } from '../../components/ui'
+import { Card, Methodology, MetricCard, RelatedTools } from '../../components/ui'
 import { PageHeader } from '../../components/layout'
 
 interface Props {
@@ -121,6 +121,15 @@ export function RetirementView({ state, actions, onNavigate }: Props) {
           <span><i className="legend__dot legend__dot--good" />ช่วงหลังเกษียณ</span>
         </div>
       </Card>
+
+      <Methodology
+        items={[
+          'คำนวณรายจ่ายหลังเกษียณรายปีจากเป้าหมายรายเดือน แล้วปรับด้วยเงินเฟ้อจนถึงอายุเกษียณ',
+          'หาเงินก้อนเป้าหมายจากช่วงเวลาหลังเกษียณ ผลตอบแทนหลังเกษียณ และบำนาญประกันสังคมที่กรอกไว้',
+          'จำลองพอร์ตจากสินทรัพย์และเงินออมปัจจุบันเทียบกับเป้าหมาย เพื่อบอกช่องว่างหรือเงินเกินเป้า',
+        ]}
+        note="ผลลัพธ์เป็นสมมติฐานระยะยาว ควรทบทวนเงินเฟ้อ ผลตอบแทน และค่าใช้จ่ายจริงอย่างน้อยปีละครั้ง"
+      />
 
       <RelatedTools
         onNavigate={onNavigate}

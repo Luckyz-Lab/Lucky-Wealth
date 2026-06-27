@@ -4,7 +4,7 @@ import type { AppState, Deductions, Income, ViewId } from '../../types'
 import type { WealthActions } from '../../hooks/usePersistentWealthState'
 import { fmt, pct } from '../../domain/format'
 import { calcTax } from '../../domain/tax'
-import { Badge, Button, Card, DataTable, Input, MetricCard, ProgressBar, RelatedTools, Select } from '../../components/ui'
+import { Badge, Button, Card, DataTable, Input, Methodology, MetricCard, ProgressBar, RelatedTools, Select } from '../../components/ui'
 import { PageHeader } from '../../components/layout'
 
 interface Props {
@@ -57,6 +57,14 @@ function parseMoney(value: string): number {
 
 function moneyInput(value: number): string {
   return value > 0 ? fmt(value) : ''
+}
+
+function formatMoneyText(value: string): string {
+  const raw = value.replace(/[^\d.]/g, '')
+  if (!raw) return ''
+  const [whole, decimal] = raw.split('.')
+  const formattedWhole = fmt(Number(whole) || 0)
+  return decimal !== undefined ? `${formattedWhole}.${decimal.slice(0, 2)}` : formattedWhole
 }
 
 export function TaxView({ state, actions, onNavigate }: Props) {
@@ -117,8 +125,8 @@ export function TaxView({ state, actions, onNavigate }: Props) {
             </div>
             <div className="form-grid form-grid--5">
               <Input label="ชื่อรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} info="ตั้งชื่อให้จำง่าย เช่น เงินเดือนบริษัท, ฟรีแลนซ์, เงินปันผล" placeholder="เงินเดือน" />
-              <Input label="รายได้ต่อปี" inputMode="decimal" value={annualIncomeAmount} onChange={(event) => setAnnualIncomeAmount(event.target.value)} onBlur={() => setAnnualIncomeAmount(moneyInput(parseMoney(annualIncomeAmount)))} info="กรอกรายได้รวมทั้งปีก่อนหักภาษี เช่น เงินเดือน 50,000 บาทต่อเดือน ให้กรอก 600000 หรือ 600,000" placeholder="600,000" />
-              <Input label="หัก ณ ที่จ่ายต่อปี" inputMode="decimal" value={annualWht} onChange={(event) => setAnnualWht(event.target.value)} onBlur={() => setAnnualWht(moneyInput(parseMoney(annualWht)))} info="กรอกภาษีที่ถูกหักไว้ทั้งปีจากสลิปหรือใบ 50 ทวิ ถ้าไม่มีให้ใส่ 0" placeholder="0" />
+              <Input label="รายได้ต่อปี" inputMode="decimal" value={annualIncomeAmount} onChange={(event) => setAnnualIncomeAmount(formatMoneyText(event.target.value))} info="กรอกรายได้รวมทั้งปีก่อนหักภาษี เช่น เงินเดือน 50,000 บาทต่อเดือน ให้กรอก 600000 หรือ 600,000" placeholder="600,000" />
+              <Input label="หัก ณ ที่จ่ายต่อปี" inputMode="decimal" value={annualWht} onChange={(event) => setAnnualWht(formatMoneyText(event.target.value))} info="กรอกภาษีที่ถูกหักไว้ทั้งปีจากสลิปหรือใบ 50 ทวิ ถ้าไม่มีให้ใส่ 0" placeholder="0" />
               <Select label="ประเภทเงินได้" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามมาตรา 40 มีผลต่อวิธีหักค่าใช้จ่าย">
                 {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
@@ -258,6 +266,15 @@ export function TaxView({ state, actions, onNavigate }: Props) {
           </div>
         </Card>
       </div>
+
+      <Methodology
+        items={[
+          'รวมรายได้ทั้งปีจากรายการที่บันทึก แล้วแยกตามประเภทเงินได้ ม.40 เพื่อเลือกวิธีหักค่าใช้จ่าย',
+          'หักค่าใช้จ่ายและค่าลดหย่อนตามเพดานที่ระบบรองรับ จากนั้นคำนวณรายได้สุทธิที่ต้องเสียภาษี',
+          'คำนวณภาษีแบบขั้นบันได 0% ถึง 35% แล้วหักเครดิตภาษีหัก ณ ที่จ่ายเพื่อประมาณยอดจ่ายเพิ่มหรือขอคืน',
+        ]}
+        note="ผลลัพธ์เป็น estimator สำหรับวางแผน ต้องตรวจเอกสารและประกาศกรมสรรพากรก่อนยื่นจริง"
+      />
 
       <RelatedTools
         onNavigate={onNavigate}

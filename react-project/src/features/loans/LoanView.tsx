@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppState, ViewId } from '../../types'
 import { fmt } from '../../domain/format'
 import { loanCalc } from '../../domain/loans'
-import { Card, DataTable, EmptyState, Input, MetricCard, RelatedTools, Select } from '../../components/ui'
+import { Card, DataTable, EmptyState, Input, Methodology, MetricCard, RelatedTools, Select } from '../../components/ui'
 import { PageHeader } from '../../components/layout'
 
 interface Props {
@@ -10,9 +10,18 @@ interface Props {
   onNavigate: (view: ViewId) => void
 }
 
+function parseMoney(value: string): number {
+  return Number(value.replace(/,/g, '')) || 0
+}
+
+function formatMoneyText(value: string): string {
+  const raw = value.replace(/[^\d]/g, '')
+  return raw ? fmt(Number(raw) || 0) : ''
+}
+
 export function LoanView({ state, onNavigate }: Props) {
   const [selectedId, setSelectedId] = useState(state.debts[0]?.id || '')
-  const [extra, setExtra] = useState(3000)
+  const [extraInput, setExtraInput] = useState('3,000')
   const [refi, setRefi] = useState(3.3)
 
   useEffect(() => {
@@ -20,6 +29,7 @@ export function LoanView({ state, onNavigate }: Props) {
   }, [selectedId, state.debts])
 
   const debt = state.debts.find((item) => item.id === selectedId)
+  const extra = parseMoney(extraInput)
 
   if (!state.debts.length) {
     return (
@@ -59,7 +69,7 @@ export function LoanView({ state, onNavigate }: Props) {
       <Card title="1. สมมติฐานเงินกู้" eyebrow="Inputs">
         <div className="preset-row">
           {[0, 2000, 5000, 10000].map((amount) => (
-            <button key={amount} type="button" className="chip" onClick={() => setExtra(amount)}>โปะ ฿{fmt(amount)}</button>
+            <button key={amount} type="button" className="chip" onClick={() => setExtraInput(fmt(amount))}>โปะ ฿{fmt(amount)}</button>
           ))}
           {[2.9, 3.3, 3.9, 4.5].map((rate) => (
             <button key={rate} type="button" className="chip" onClick={() => setRefi(rate)}>Refi {rate}%</button>
@@ -69,7 +79,7 @@ export function LoanView({ state, onNavigate }: Props) {
           <Select label="เลือกหนี้สิน" value={selectedId} onChange={(event) => setSelectedId(event.target.value)} info="เลือกหนี้จากข้อมูลที่บันทึกไว้ในหน้าแรก เช่น บ้าน รถ หรือสินเชื่อส่วนบุคคล">
             {state.debts.map((item) => <option key={item.id} value={item.id}>{item.t} (฿{fmt(item.b)})</option>)}
           </Select>
-          <Input label="โปะเพิ่ม/เดือน" type="number" value={extra} onChange={(event) => setExtra(Number(event.target.value) || 0)} info="ยอดเงินที่จ่ายเพิ่มจากค่างวดปกติทุกเดือน เพื่อลดเงินต้นและดอกเบี้ย" />
+          <Input label="โปะเพิ่ม/เดือน" inputMode="decimal" value={extraInput} onChange={(event) => setExtraInput(formatMoneyText(event.target.value))} info="ยอดเงินที่จ่ายเพิ่มจากค่างวดปกติทุกเดือน เพื่อลดเงินต้นและดอกเบี้ย" />
           <Input label="อัตรา Refinance (%/ปี)" type="number" step="0.1" value={refi} onChange={(event) => setRefi(Number(event.target.value) || 0)} info="อัตราดอกเบี้ยใหม่ที่คาดว่าจะได้หลัง refinance หรือ retention" />
         </div>
       </Card>
@@ -92,6 +102,15 @@ export function LoanView({ state, onNavigate }: Props) {
           </DataTable>
         </Card>
       )}
+
+      <Methodology
+        items={[
+          'ใช้ยอดหนี้คงเหลือ ดอกเบี้ยต่อปี และยอดผ่อนต่อเดือนจากข้อมูลหนี้ที่บันทึกไว้',
+          'จำลองดอกเบี้ยรายเดือนและตัดเงินต้นจนยอดหนี้เป็นศูนย์ เพื่อหาเดือนที่ปิดหนี้และดอกเบี้ยรวม',
+          'เปรียบเทียบแผนปกติ แผนโปะเพิ่ม แผน refinance และแผน refinance พร้อมโปะ เพื่อดูเงินที่ประหยัดได้',
+        ]}
+        note="ผลลัพธ์เป็นประมาณการ ไม่รวมค่าธรรมเนียม refinance ประกัน MRTA ค่าจดจำนอง หรือเงื่อนไขเฉพาะสัญญา"
+      />
 
       <RelatedTools
         onNavigate={onNavigate}
