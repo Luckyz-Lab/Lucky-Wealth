@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { AppState, Asset, Expense, Income } from '../../types'
+import type { AppState, Asset, Expense, Income, ViewId } from '../../types'
 import type { WealthActions } from '../../hooks/usePersistentWealthState'
 import { buildHealthMetrics, calcTotals } from '../../domain/finance'
 import { fmt, pct } from '../../domain/format'
@@ -11,6 +11,7 @@ import { PageHeader } from '../../components/layout'
 interface Props {
   state: AppState
   actions: WealthActions
+  onNavigate: (view: ViewId) => void
 }
 
 type TabId = 'income' | 'expense' | 'asset' | 'debt'
@@ -42,7 +43,15 @@ const INCOME_TYPE_OPTIONS: { value: Income['tp']; label: string }[] = [
   { value: '40_8', label: 'ม.40(8) ธุรกิจ/อื่นๆ' },
 ]
 
-export function DashboardView({ state, actions }: Props) {
+const TOOL_CARDS: { id: ViewId; title: string; label: string; description: string; icon: string; badge: string }[] = [
+  { id: 'tax', title: 'คำนวณภาษี + ค่าลดหย่อน', label: 'Thai PIT', description: 'รายได้ต่อปี ลดหย่อน เครดิตหัก ณ ที่จ่าย และภาษีขั้นบันได', icon: 'ti-receipt-tax', badge: 'ยอดนิยม' },
+  { id: 'loan', title: 'ผ่อนบ้าน / รถ + โปะ', label: 'Debt planner', description: 'เทียบแผนผ่อนปกติ โปะเพิ่ม และ refinance', icon: 'ti-home-dollar', badge: 'ใช้บ่อย' },
+  { id: 'retirement', title: 'วางแผนเกษียณ + DCA', label: 'Retirement', description: 'เป้าเงินหลังเกษียณ ช่องว่างพอร์ต และ DCA ที่ควรเติม', icon: 'ti-target-arrow', badge: 'วางแผนอนาคต' },
+  { id: 'vault', title: 'คลังเอกสารภาษี', label: 'Document vault', description: 'เก็บรายการเอกสารสำคัญ เช่น 50 ทวิ ประกัน ใบเสร็จ', icon: 'ti-folder-check', badge: 'เตรียมยื่น' },
+  { id: 'ai', title: 'AI Advisor', label: 'Advisor', description: 'ถามสรุปพอร์ต ภาษี กองทุนลดหย่อน และหนี้สินจากข้อมูลของคุณ', icon: 'ti-message-2', badge: 'วิเคราะห์เร็ว' },
+]
+
+export function DashboardView({ state, actions, onNavigate }: Props) {
   const [tab, setTab] = useState<TabId>('income')
   const [incomeTitle, setIncomeTitle] = useState('')
   const [incomeAmount, setIncomeAmount] = useState('')
@@ -111,23 +120,38 @@ export function DashboardView({ state, actions }: Props) {
   return (
     <>
       <PageHeader
-        eyebrow="Personal cockpit"
-        title="ภาพรวมพอร์ต"
-        description="เห็น cashflow, หนี้, สภาพคล่อง และภาษีประมาณการในจอเดียว"
-        meta="ปีภาษี 2569 · estimator"
+        eyebrow="Calculator hub"
+        title="เครื่องมือการเงินส่วนตัว"
+        description="เริ่มจากเครื่องมือที่ต้องใช้บ่อยที่สุด แล้วค่อยบันทึกข้อมูลพื้นฐานเพื่อให้ทุกเครื่องมือคำนวณร่วมกันได้"
+        meta="5 เครื่องมือ · ข้อมูลอยู่ในเครื่อง"
       />
 
       <section className="hero-panel">
         <div className="hero-panel__copy">
           <span className="eyebrow">Lucky Wealth</span>
-          <h2>ระบบส่วนตัวสำหรับตัดสินใจเรื่องเงินแบบเร็วและตรวจสอบย้อนกลับได้</h2>
-          <p>ข้อมูลยังเก็บในเครื่องผ่าน localStorage เหมาะกับการใช้งานส่วนตัวก่อนเชื่อม Cloud Sync ในเฟสถัดไป</p>
+          <h2>คำนวณภาษี หนี้ เกษียณ และภาพรวมพอร์ตจากข้อมูลชุดเดียว</h2>
+          <p>ออกแบบใหม่ให้เป็น calculator hub แบบใช้งานจริง: เลือกเครื่องมือ กรอกสมมติฐาน ดูคำตอบหลัก และตรวจ breakdown ต่อได้ทันที</p>
         </div>
         <div className="hero-panel__stat">
-          <span>Net Worth</span>
-          <strong>฿{fmt(totals.nw)}</strong>
-          <small>สินทรัพย์ ฿{fmt(totals.ast)} · หนี้ ฿{fmt(totals.dbt)}</small>
+          <span>ภาษีต้องชำระเพิ่ม</span>
+          <strong>฿{fmt(tax.taxPayable)}</strong>
+          <small>ก่อนเครดิต ฿{fmt(tax.taxBeforeCredits)} · WHT ฿{fmt(tax.withholdingCredit)}</small>
         </div>
+      </section>
+
+      <section className="tool-grid" aria-label="เครื่องมือทั้งหมด">
+        {TOOL_CARDS.map((tool) => (
+          <article key={tool.id} className="tool-card">
+            <div className="tool-card__top">
+              <div className="tool-card__icon"><i aria-hidden="true" className={`ti ${tool.icon}`} /></div>
+              <Badge tone={tool.id === 'tax' ? 'warn' : tool.id === 'retirement' ? 'good' : 'info'}>{tool.badge}</Badge>
+            </div>
+            <p className="tool-card__label">{tool.label}</p>
+            <h3>{tool.title}</h3>
+            <p>{tool.description}</p>
+            <Button variant={tool.id === 'tax' ? 'primary' : 'secondary'} icon="ti-arrow-right" onClick={() => onNavigate(tool.id)}>เปิดเครื่องมือ</Button>
+          </article>
+        ))}
       </section>
 
       <section className="metric-grid">

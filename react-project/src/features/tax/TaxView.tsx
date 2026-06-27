@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { AppState, Deductions, Income } from '../../types'
+import type { AppState, Deductions, Income, ViewId } from '../../types'
 import type { WealthActions } from '../../hooks/usePersistentWealthState'
 import { fmt, pct } from '../../domain/format'
 import { calcTax } from '../../domain/tax'
-import { Badge, Button, Card, DataTable, Input, MetricCard, ProgressBar, Select } from '../../components/ui'
+import { Badge, Button, Card, DataTable, Input, MetricCard, ProgressBar, RelatedTools, Select } from '../../components/ui'
 import { PageHeader } from '../../components/layout'
 
 interface Props {
   state: AppState
   actions: WealthActions
+  onNavigate: (view: ViewId) => void
 }
 
 const INCOME_TYPE_OPTIONS: { value: Income['tp']; label: string }[] = [
@@ -50,7 +51,15 @@ const DED_ITEMS: { key: keyof Deductions; label: string; max: number; step?: num
   { key: 'easyReceipt', label: 'Easy E-Receipt', max: 50000, info: 'กรอกยอดใช้จ่ายตามมาตรการและช่วงเวลาที่ประกาศสำหรับปีภาษีนั้น' },
 ]
 
-export function TaxView({ state, actions }: Props) {
+function parseMoney(value: string): number {
+  return Number(value.replace(/,/g, '')) || 0
+}
+
+function moneyInput(value: number): string {
+  return value > 0 ? fmt(value) : ''
+}
+
+export function TaxView({ state, actions, onNavigate }: Props) {
   const [incomeTitle, setIncomeTitle] = useState('เงินเดือน')
   const [annualIncomeAmount, setAnnualIncomeAmount] = useState('')
   const [annualWht, setAnnualWht] = useState('')
@@ -59,17 +68,23 @@ export function TaxView({ state, actions }: Props) {
   const marginalTone = tax.mg <= 10 ? 'good' : tax.mg <= 25 ? 'warn' : 'bad'
 
   const addIncome = () => {
-    const annualAmount = Number(annualIncomeAmount)
+    const annualAmount = parseMoney(annualIncomeAmount)
     if (!incomeTitle.trim() || annualAmount <= 0) return
     actions.addIncome({
       t: incomeTitle.trim(),
       a: Math.round(annualAmount / 12),
-      wht: Math.round((Number(annualWht) || 0) / 12),
+      wht: Math.round(parseMoney(annualWht) / 12),
       tp: incomeType,
     })
     setIncomeTitle('')
     setAnnualIncomeAmount('')
     setAnnualWht('')
+  }
+
+  const applySalaryPreset = (annualAmount: number) => {
+    setIncomeTitle('เงินเดือน')
+    setIncomeType('40_1')
+    setAnnualIncomeAmount(moneyInput(annualAmount))
   }
 
   return (
@@ -93,10 +108,17 @@ export function TaxView({ state, actions }: Props) {
         <div className="tax-steps">
           <Card title="1. รายได้ต่อปี" eyebrow="Step 1">
             <p className="section-copy">กรอกเงินเดือนหรือรายได้รวมตลอดปี แยกตามประเภทเงินได้เพื่อให้ระบบหักค่าใช้จ่ายได้ถูกทิศทาง</p>
+            <div className="preset-row" aria-label="ตัวอย่างรายได้ต่อปี">
+              {[360000, 600000, 900000, 1200000].map((amount) => (
+                <button key={amount} type="button" className="chip" onClick={() => applySalaryPreset(amount)}>
+                  ฿{fmt(amount)}/ปี
+                </button>
+              ))}
+            </div>
             <div className="form-grid form-grid--5">
               <Input label="ชื่อรายได้" value={incomeTitle} onChange={(event) => setIncomeTitle(event.target.value)} info="ตั้งชื่อให้จำง่าย เช่น เงินเดือนบริษัท, ฟรีแลนซ์, เงินปันผล" placeholder="เงินเดือน" />
-              <Input label="รายได้ต่อปี" type="number" inputMode="decimal" value={annualIncomeAmount} onChange={(event) => setAnnualIncomeAmount(event.target.value)} info="กรอกรายได้รวมทั้งปีก่อนหักภาษี เช่น เงินเดือน 50,000 บาทต่อเดือน ให้กรอก 600000" placeholder="600000" />
-              <Input label="หัก ณ ที่จ่ายต่อปี" type="number" inputMode="decimal" value={annualWht} onChange={(event) => setAnnualWht(event.target.value)} info="กรอกภาษีที่ถูกหักไว้ทั้งปีจากสลิปหรือใบ 50 ทวิ ถ้าไม่มีให้ใส่ 0" placeholder="0" />
+              <Input label="รายได้ต่อปี" inputMode="decimal" value={annualIncomeAmount} onChange={(event) => setAnnualIncomeAmount(event.target.value)} onBlur={() => setAnnualIncomeAmount(moneyInput(parseMoney(annualIncomeAmount)))} info="กรอกรายได้รวมทั้งปีก่อนหักภาษี เช่น เงินเดือน 50,000 บาทต่อเดือน ให้กรอก 600000 หรือ 600,000" placeholder="600,000" />
+              <Input label="หัก ณ ที่จ่ายต่อปี" inputMode="decimal" value={annualWht} onChange={(event) => setAnnualWht(event.target.value)} onBlur={() => setAnnualWht(moneyInput(parseMoney(annualWht)))} info="กรอกภาษีที่ถูกหักไว้ทั้งปีจากสลิปหรือใบ 50 ทวิ ถ้าไม่มีให้ใส่ 0" placeholder="0" />
               <Select label="ประเภทเงินได้" value={incomeType} onChange={(event) => setIncomeType(event.target.value as Income['tp'])} info="เลือกประเภทเงินได้ตามมาตรา 40 มีผลต่อวิธีหักค่าใช้จ่าย">
                 {INCOME_TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </Select>
@@ -236,6 +258,15 @@ export function TaxView({ state, actions }: Props) {
           </div>
         </Card>
       </div>
+
+      <RelatedTools
+        onNavigate={onNavigate}
+        items={[
+          { id: 'retirement', title: 'วางแผนเกษียณ + DCA', description: 'ดูว่าควรลงทุนเพิ่มเท่าไรเพื่อปิดช่องว่างหลังเกษียณ', icon: 'ti-target-arrow' },
+          { id: 'loan', title: 'ผ่อนบ้าน / รถ + โปะ', description: 'จำลองเงินโปะและ refinance เพื่อลดดอกเบี้ยรวม', icon: 'ti-home-dollar' },
+          { id: 'ai', title: 'AI Advisor', description: 'ให้ระบบสรุปแนวทางลดหย่อนและความเสี่ยงจากข้อมูลของคุณ', icon: 'ti-message-2' },
+        ]}
+      />
     </>
   )
 }

@@ -25,10 +25,10 @@ export default function App() {
   return (
     <>
       <AppShell view={view} ownerName={state.ownerName} onNavigate={setView} onReset={() => setConfirmReset(true)} onHelp={() => setHelpOpen(true)}>
-        {view === 'dashboard' && <DashboardView state={state} actions={actions} />}
-        {view === 'tax' && <TaxView state={state} actions={actions} />}
-        {view === 'loan' && <LoanView state={state} />}
-        {view === 'retirement' && <RetirementView state={state} actions={actions} />}
+        {view === 'dashboard' && <DashboardView state={state} actions={actions} onNavigate={setView} />}
+        {view === 'tax' && <TaxView state={state} actions={actions} onNavigate={setView} />}
+        {view === 'loan' && <LoanView state={state} onNavigate={setView} />}
+        {view === 'retirement' && <RetirementView state={state} actions={actions} onNavigate={setView} />}
         {view === 'vault' && <VaultView state={state} actions={actions} />}
         {view === 'ai' && <AIView state={state} actions={actions} />}
       </AppShell>
