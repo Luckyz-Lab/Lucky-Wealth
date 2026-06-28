@@ -1,6 +1,13 @@
-export const STORAGE_VERSION = 3
+export const STORAGE_VERSION = 4
 
 export type IncomeType = '40_1' | '40_2' | '40_3' | '40_4' | '40_5' | '40_6' | '40_7' | '40_8'
+
+export type FilingForm = 'PND90' | 'PND91' | 'PND94'
+export type FilingMode = 'quick_estimate' | 'filing_prep' | 'review_export'
+export type FilingStatus = 'single' | 'married_separate' | 'married_joint'
+export type TaxResidency = 'resident' | 'non_resident'
+export type ExpenseMethodType = 'standard' | 'actual'
+export type TaxCreditType = 'withholding' | 'dividend' | 'midyear' | 'other'
 
 export interface Income {
   id: string
@@ -8,6 +15,39 @@ export interface Income {
   a: number
   tp: IncomeType
   wht: number
+}
+
+export interface TaxFilingProfile {
+  taxYear: number
+  mode: FilingMode
+  residency: TaxResidency
+  filingStatus: FilingStatus
+  spouseHasIncome: boolean
+  forceForm?: FilingForm
+}
+
+export interface ExpenseMethod {
+  id: string
+  incomeType: IncomeType
+  method: ExpenseMethodType
+  subtype: string
+  standardRate: number
+  actualAmount: number
+}
+
+export interface TaxCredit {
+  id: string
+  label: string
+  type: TaxCreditType
+  amount: number
+  source?: string
+}
+
+export interface TaxFilingDraft {
+  profile: TaxFilingProfile
+  expenseMethods: ExpenseMethod[]
+  credits: TaxCredit[]
+  notes: string
 }
 
 export interface Expense {
@@ -93,6 +133,7 @@ export interface AppState {
   ret: RetirementParams
   docs: DocumentRecord[]
   chat: ChatMessage[]
+  taxFiling: TaxFilingDraft
 }
 
 export interface Totals {
@@ -119,6 +160,67 @@ export interface TaxLineItem {
   amount: number
 }
 
+export interface TaxRule {
+  id: string
+  label: string
+  year: number
+  effectiveDate: string
+  sourceUrl: string
+  formula: string
+  cap?: string
+  eligibility?: string
+  formMapping?: FilingForm[]
+}
+
+export interface TaxYearRuleSet {
+  country: 'TH'
+  taxYear: number
+  ruleVersion: string
+  effectiveDate: string
+  sourceUrls: string[]
+  rules: TaxRule[]
+}
+
+export interface TaxCalculationTrace {
+  id: string
+  label: string
+  amount: number
+  formula: string
+  sourceUrl: string
+  inputRefs: string[]
+  kind: 'income' | 'expense' | 'deduction' | 'credit' | 'tax'
+}
+
+export interface TaxValidationIssue {
+  severity: 'error' | 'warning' | 'info'
+  code: string
+  message: string
+  field?: string
+  action?: string
+  sourceUrl?: string
+}
+
+export interface TaxDocumentRequirement {
+  id: string
+  label: string
+  reason: string
+  requiredWhen: string
+  sourceUrl: string
+  status: 'required' | 'recommended' | 'not_needed'
+}
+
+export interface FilingPackage {
+  generatedAt: string
+  taxYear: number
+  ruleVersion: string
+  formHint: string
+  summary: Pick<TaxEstimate, 'ann' | 'exd' | 'tot' | 'net' | 'taxBeforeCredits' | 'withholdingCredit' | 'taxPayable' | 'refund'>
+  validationIssues: TaxValidationIssue[]
+  documentRequirements: TaxDocumentRequirement[]
+  trace: TaxCalculationTrace[]
+  sourceUrls: string[]
+}
+
 export interface TaxEstimate {
   taxYear: number
   ruleVersion: string
@@ -139,6 +241,10 @@ export interface TaxEstimate {
   warnings: string[]
   sourceUrls: string[]
   formHint: string
+  filingForms: FilingForm[]
+  validationIssues: TaxValidationIssue[]
+  trace: TaxCalculationTrace[]
+  documentRequirements: TaxDocumentRequirement[]
   rmfR: number
   ssfR: number
   esgR: number

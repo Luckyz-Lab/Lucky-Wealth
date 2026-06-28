@@ -13,10 +13,10 @@ export function Sidebar({ view, ownerName, onNavigate, onReset }: SidebarProps) 
   return (
     <aside className="sidebar" aria-label="Primary navigation">
       <div className="brand">
-        <div className="brand__mark"><i aria-hidden="true" className="ti ti-chart-pie" /></div>
+        <div className="brand__mark"><i aria-hidden="true" className="ti ti-calculator" /></div>
         <div>
           <div className="brand__name">Lucky Wealth</div>
-          <div className="brand__sub">Personal finance cockpit</div>
+          <div className="brand__sub">Personal finance calculators</div>
         </div>
       </div>
 

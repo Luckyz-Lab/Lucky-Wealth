@@ -35,7 +35,7 @@ export default function App() {
       <ConfirmDialog
         open={confirmReset}
         title="รีเซ็ตข้อมูลทั้งหมด?"
-        description="ข้อมูลใน localStorage จะกลับเป็นค่าตัวอย่างเริ่มต้น การกระทำนี้ย้อนกลับไม่ได้ถ้าไม่ได้ export backup ไว้"
+        description="ข้อมูลใน localStorage จะกลับเป็นข้อมูลตัวอย่างเริ่มต้น รวมถึงรายการรายได้ ค่าลดหย่อน เอกสาร และ tax filing draft การกระทำนี้ย้อนกลับไม่ได้ถ้าไม่ได้ export backup ไว้"
         confirmLabel="รีเซ็ต"
         onConfirm={resetData}
         onCancel={() => setConfirmReset(false)}

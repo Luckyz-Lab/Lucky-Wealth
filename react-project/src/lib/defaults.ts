@@ -58,9 +58,23 @@ export const DEFAULT_STATE: AppState = {
     { id: 'dc2', t: 'ใบ 50 ทวิ เงินเดือน', c: 'tavi_50', y: 2569 },
   ],
   chat: [],
+  taxFiling: {
+    profile: {
+      taxYear: 2569,
+      mode: 'filing_prep',
+      residency: 'resident',
+      filingStatus: 'single',
+      spouseHasIncome: false,
+    },
+    expenseMethods: [
+      { id: 'xm1', incomeType: '40_7', method: 'standard', subtype: 'รับเหมาที่จัดหาสัมภาระ', standardRate: 60, actualAmount: 0 },
+    ],
+    credits: [],
+    notes: '',
+  },
 }
 
-export const STORAGE_KEY = 'lucky_wealth_state_v3'
+export const STORAGE_KEY = 'lucky_wealth_state_v4'
 
 export function cloneDefaultState(): AppState {
   return structuredClone(DEFAULT_STATE)

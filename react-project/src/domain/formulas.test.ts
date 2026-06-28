@@ -3,7 +3,7 @@ import { DEFAULT_STATE } from '../lib/defaults'
 import { calcTotals } from './finance'
 import { loanCalc } from './loans'
 import { calcRetirement } from './retirement'
-import { calcTax } from './tax'
+import { buildFilingPackage, calcTax } from './tax'
 
 describe('finance totals', () => {
   it('calculates portfolio totals from the default state', () => {
@@ -18,8 +18,8 @@ describe('finance totals', () => {
   })
 })
 
-describe('tax estimator', () => {
-  it('calculates the default tax estimate with 2569 estimator rules', () => {
+describe('tax filing prep', () => {
+  it('calculates the default tax estimate with 2569 filing-prep rules', () => {
     const tax = calcTax(DEFAULT_STATE)
 
     expect(tax.ann).toBe(1314000)
@@ -31,7 +31,52 @@ describe('tax estimator', () => {
     expect(tax.taxPayable).toBe(32600)
     expect(tax.refund).toBe(0)
     expect(tax.mg).toBe(20)
-    expect(tax.formHint).toContain('ภ.ง.ด.90')
+    expect(tax.filingForms).toContain('PND90')
+    expect(tax.trace.length).toBeGreaterThan(0)
+    expect(tax.documentRequirements.some((doc) => doc.status === 'required')).toBe(true)
+  })
+
+  it('selects PND91 for salary-only income', () => {
+    const state = structuredClone(DEFAULT_STATE)
+    state.incomes = [{ id: 'i1', t: 'เงินเดือน', a: 50000, tp: '40_1', wht: 2500 }]
+
+    const tax = calcTax(state)
+
+    expect(tax.filingForms).toEqual(['PND91'])
+    expect(tax.formHint).toContain('ภ.ง.ด.91')
+  })
+
+  it('warns instead of silently deducting unsupported 40(6) expenses', () => {
+    const state = structuredClone(DEFAULT_STATE)
+    state.incomes = [{ id: 'i1', t: 'วิชาชีพอิสระ', a: 100000, tp: '40_6', wht: 0 }]
+    state.taxFiling.expenseMethods = []
+
+    const tax = calcTax(state)
+
+    expect(tax.exd).toBe(0)
+    expect(tax.validationIssues.some((issue) => issue.code === 'missing-expense-method-40_6')).toBe(true)
+  })
+
+  it('applies a selected standard expense method for 40(7)', () => {
+    const state = structuredClone(DEFAULT_STATE)
+    state.incomes = [{ id: 'i1', t: 'รับเหมา', a: 100000, tp: '40_7', wht: 0 }]
+    state.taxFiling.expenseMethods = [
+      { id: 'xm1', incomeType: '40_7', method: 'standard', subtype: 'รับเหมาที่จัดหาสัมภาระ', standardRate: 60, actualAmount: 0 },
+    ]
+
+    const tax = calcTax(state)
+
+    expect(tax.exd).toBe(720000)
+    expect(tax.expenseByType.some((line) => line.label.includes('60%'))).toBe(true)
+  })
+
+  it('builds an auditable filing package', () => {
+    const pkg = buildFilingPackage(DEFAULT_STATE)
+
+    expect(pkg.taxYear).toBe(2569)
+    expect(pkg.ruleVersion).toContain('TH-PIT-2569')
+    expect(pkg.trace.length).toBeGreaterThan(0)
+    expect(pkg.sourceUrls).toContain('https://www.rd.go.th/557.html')
   })
 })
 

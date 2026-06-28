@@ -20,7 +20,7 @@ export function AppShell({ view, ownerName, onNavigate, onReset, onHelp, childre
         <header className="topbar" aria-label="Top navigation">
           <div>
             <span className="topbar__eyebrow">Lucky Wealth</span>
-            <strong>ระบบวางแผนการเงินและภาษีส่วนบุคคล</strong>
+            <strong>ศูนย์เครื่องคำนวณการเงินและภาษีส่วนบุคคล</strong>
           </div>
           <button type="button" className="help-button" onClick={onHelp} aria-label="เปิดคำอธิบายการใช้งานเว็บ">
             <i aria-hidden="true" className="ti ti-help-circle" />

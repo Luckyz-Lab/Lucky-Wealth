@@ -7,8 +7,12 @@ import type {
   Deductions,
   DocumentRecord,
   Expense,
+  ExpenseMethod,
   Income,
   RetirementParams,
+  TaxCredit,
+  TaxFilingDraft,
+  TaxFilingProfile,
 } from '../types'
 import { STORAGE_VERSION } from '../types'
 import { cloneDefaultState, STORAGE_KEY } from '../lib/defaults'
@@ -23,6 +27,12 @@ function isNumber(value: unknown): value is number {
 }
 
 const INCOME_TYPES = new Set(['40_1', '40_2', '40_3', '40_4', '40_5', '40_6', '40_7', '40_8'])
+const FILING_MODES = new Set(['quick_estimate', 'filing_prep', 'review_export'])
+const FILING_STATUSES = new Set(['single', 'married_separate', 'married_joint'])
+const RESIDENCIES = new Set(['resident', 'non_resident'])
+const FILING_FORMS = new Set(['PND90', 'PND91', 'PND94'])
+const EXPENSE_METHODS = new Set(['standard', 'actual'])
+const CREDIT_TYPES = new Set(['withholding', 'dividend', 'midyear', 'other'])
 
 function isIncome(value: unknown): value is Income {
   return (
@@ -118,6 +128,63 @@ function normalizeChat(value: unknown): ChatMessage[] {
     : []
 }
 
+function normalizeTaxProfile(value: unknown, fallback: TaxFilingProfile): TaxFilingProfile {
+  if (!isRecord(value)) return fallback
+  return {
+    taxYear: isNumber(value.taxYear) ? value.taxYear : fallback.taxYear,
+    mode: typeof value.mode === 'string' && FILING_MODES.has(value.mode) ? value.mode as TaxFilingProfile['mode'] : fallback.mode,
+    residency: typeof value.residency === 'string' && RESIDENCIES.has(value.residency) ? value.residency as TaxFilingProfile['residency'] : fallback.residency,
+    filingStatus: typeof value.filingStatus === 'string' && FILING_STATUSES.has(value.filingStatus) ? value.filingStatus as TaxFilingProfile['filingStatus'] : fallback.filingStatus,
+    spouseHasIncome: typeof value.spouseHasIncome === 'boolean' ? value.spouseHasIncome : fallback.spouseHasIncome,
+    forceForm: typeof value.forceForm === 'string' && FILING_FORMS.has(value.forceForm) ? value.forceForm as TaxFilingProfile['forceForm'] : undefined,
+  }
+}
+
+function normalizeExpenseMethods(value: unknown): ExpenseMethod[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is ExpenseMethod => (
+      isRecord(item) &&
+      typeof item.id === 'string' &&
+      typeof item.incomeType === 'string' &&
+      INCOME_TYPES.has(item.incomeType) &&
+      typeof item.method === 'string' &&
+      EXPENSE_METHODS.has(item.method) &&
+      typeof item.subtype === 'string' &&
+      isNumber(item.standardRate) &&
+      isNumber(item.actualAmount)
+    ))
+    : []
+}
+
+function normalizeTaxCredits(value: unknown): TaxCredit[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is TaxCredit => (
+      isRecord(item) &&
+      typeof item.id === 'string' &&
+      typeof item.label === 'string' &&
+      typeof item.type === 'string' &&
+      CREDIT_TYPES.has(item.type) &&
+      isNumber(item.amount)
+    )).map((item) => ({
+      id: item.id,
+      label: item.label,
+      type: item.type,
+      amount: item.amount,
+      source: typeof item.source === 'string' ? item.source : undefined,
+    }))
+    : []
+}
+
+function normalizeTaxFiling(value: unknown, fallback: TaxFilingDraft): TaxFilingDraft {
+  if (!isRecord(value)) return fallback
+  return {
+    profile: normalizeTaxProfile(value.profile, fallback.profile),
+    expenseMethods: normalizeExpenseMethods(value.expenseMethods),
+    credits: normalizeTaxCredits(value.credits),
+    notes: typeof value.notes === 'string' ? value.notes : fallback.notes,
+  }
+}
+
 export function normalizeState(value: unknown): AppState {
   const fallback = cloneDefaultState()
   if (!isRecord(value)) return fallback
@@ -133,12 +200,13 @@ export function normalizeState(value: unknown): AppState {
     ret: normalizeRetirement(value.ret, fallback.ret),
     docs: normalizeDocs(value.docs),
     chat: normalizeChat(value.chat),
+    taxFiling: normalizeTaxFiling(value.taxFiling, fallback.taxFiling),
   }
 }
 
 export function loadStoredState(): AppState {
   try {
-  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('lucky_wealth_state_v2') ?? localStorage.getItem('pwh_v3')
+  const stored = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('lucky_wealth_state_v3') ?? localStorage.getItem('lucky_wealth_state_v2') ?? localStorage.getItem('pwh_v3')
     return stored ? normalizeState(JSON.parse(stored)) : cloneDefaultState()
   } catch {
     return cloneDefaultState()
@@ -175,6 +243,12 @@ export function usePersistentWealthState() {
     addDebt: (payload: Omit<Debt, 'id'>) => updateState((s) => ({ ...s, debts: [...s.debts, { ...payload, id: uid('d') }] })),
     removeDebt: (id: string) => updateState((s) => ({ ...s, debts: s.debts.filter((item) => item.id !== id) })),
     updateDeductions: (key: keyof Deductions, value: number) => updateState((s) => ({ ...s, ded: { ...s.ded, [key]: value } })),
+    updateTaxProfile: (patch: Partial<TaxFilingProfile>) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, profile: { ...s.taxFiling.profile, ...patch } } })),
+    addExpenseMethod: (payload: Omit<ExpenseMethod, 'id'>) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, expenseMethods: [...s.taxFiling.expenseMethods, { ...payload, id: uid('xm') }] } })),
+    removeExpenseMethod: (id: string) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, expenseMethods: s.taxFiling.expenseMethods.filter((item) => item.id !== id) } })),
+    addTaxCredit: (payload: Omit<TaxCredit, 'id'>) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, credits: [...s.taxFiling.credits, { ...payload, id: uid('tc') }] } })),
+    removeTaxCredit: (id: string) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, credits: s.taxFiling.credits.filter((item) => item.id !== id) } })),
+    updateTaxNotes: (notes: string) => updateState((s) => ({ ...s, taxFiling: { ...s.taxFiling, notes } })),
     updateRetirement: (key: keyof RetirementParams, value: number) => updateState((s) => ({ ...s, ret: { ...s.ret, [key]: value } })),
     addDocument: (payload: Omit<DocumentRecord, 'id'>) => updateState((s) => ({ ...s, docs: [...s.docs, { ...payload, id: uid('dc') }] })),
     removeDocument: (id: string) => updateState((s) => ({ ...s, docs: s.docs.filter((item) => item.id !== id) })),
