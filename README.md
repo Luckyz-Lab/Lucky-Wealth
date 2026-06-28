@@ -1,6 +1,6 @@
 # Lucky Wealth
 
-Personal finance cockpit for Thai personal wealth planning. The React app is the maintained source of truth; `personal-wealth-hub.html` is kept only as a legacy standalone demo.
+Professional calculator hub for Thai personal finance and tax filing preparation. The React app is the maintained source of truth; `personal-wealth-hub.html` is kept only as a legacy standalone demo.
 
 ## Current Scope
 
